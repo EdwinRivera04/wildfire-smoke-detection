@@ -1,0 +1,6 @@
+path: data/mock
+train: images/train
+val: images/val
+test: images/test
+nc: 2
+names: ['fire', 'smoke']

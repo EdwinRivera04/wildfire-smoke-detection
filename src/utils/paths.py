@@ -1,0 +1,17 @@
+from pathlib import Path
+
+DATA_RAW            = Path("data/raw")
+DATA_PROCESSED      = Path("data/processed")
+DATA_MOCK           = Path("data/mock")
+DATASET_YAML        = Path("data/processed/dataset.yaml")
+MOCK_DATASET_YAML   = Path("data/mock/dataset.yaml")
+CONFIGS_DIR         = Path("configs")
+BASELINE_CONFIG     = Path("configs/baseline.yaml")
+IMPROVED_CONFIG     = Path("configs/improved.yaml")
+CHECKPOINTS_DIR     = Path("outputs/checkpoints")
+BASELINE_WEIGHTS    = Path("outputs/checkpoints/baseline/weights/best.pt")
+IMPROVED_WEIGHTS    = Path("outputs/checkpoints/improved/weights/best.pt")
+RESULTS_DIR         = Path("outputs/results")
+MOCK_PREDICTIONS    = Path("outputs/results/mock_predictions.json")
+BEST_THRESHOLD_JSON = Path("outputs/results/best_threshold.json")
+DEMO_OUTPUT_DIR     = Path("outputs/demo")
