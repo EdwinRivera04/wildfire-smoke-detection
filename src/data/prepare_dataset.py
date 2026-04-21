@@ -155,7 +155,7 @@ def run_full_pipeline():
     # Write dataset.yaml
     DATASET_YAML.parent.mkdir(parents=True, exist_ok=True)
     dataset_cfg = {
-        "path": str(DATA_PROCESSED),
+        "path": str(DATA_PROCESSED.resolve()),
         "train": "images/train",
         "val":   "images/val",
         "test":  "images/test",
