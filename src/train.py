@@ -102,7 +102,8 @@ def main():
 
     # Pop keys that aren't valid YOLO train() kwargs
     model_weights = cfg.pop("model", "yolov8m.pt")
-    cfg.pop("augment", None)   # handled above; YOLO's built-in augment flag stays if present
+    cfg.pop("augment", None)    # handled above; YOLO's built-in augment flag stays if present
+    cfg.pop("fl_gamma", None)   # not a valid YOLO arg in current ultralytics versions
 
     from ultralytics import YOLO
     model = YOLO(model_weights)
@@ -130,8 +131,12 @@ def main():
     results = model.train(**cfg)
     total_time = time.time() - t0
 
-    # Locate saved checkpoint
-    checkpoint = Path(cfg.get("project", "outputs/checkpoints")) / cfg.get("name", "run") / "weights" / "best.pt"
+    # Locate saved checkpoint — Ultralytics prepends runs/detect/ to relative project paths
+    project = cfg.get("project", "outputs/checkpoints")
+    name    = cfg.get("name", "run")
+    checkpoint = Path("runs/detect") / project / name / "weights" / "best.pt"
+    if not checkpoint.exists():
+        checkpoint = Path(project) / name / "weights" / "best.pt"
 
     print(f"\n{'='*50}")
     print(f"Training complete: {total_time / 60:.1f} min")
