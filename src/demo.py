@@ -43,23 +43,26 @@ def collect_images(image_dir: Path) -> list[Path]:
     return image_paths
 
 
-def run_demo(mock: bool) -> None:
+def run_demo(mock: bool, image: str | None = None) -> None:
     weights_path = get_weights_path()
-    image_dir = get_image_dir(mock)
-
-    if not image_dir.exists():
-        raise FileNotFoundError(f"Image directory not found: {image_dir}")
-
-    image_paths = collect_images(image_dir)
-    if not image_paths:
-        raise RuntimeError(f"No images found in {image_dir}")
-
     output_dir = Path("outputs/demo")
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    if image:
+        img_path = Path(image)
+        if not img_path.exists():
+            raise FileNotFoundError(f"Image not found: {image}")
+        image_paths = [img_path]
+    else:
+        image_dir = get_image_dir(mock)
+        if not image_dir.exists():
+            raise FileNotFoundError(f"Image directory not found: {image_dir}")
+        image_paths = collect_images(image_dir)
+        if not image_paths:
+            raise RuntimeError(f"No images found in {image_dir}")
+        image_paths = image_paths[:5]
+
     print(f"Using weights: {weights_path}")
-    print(f"Looking for images in: {image_dir}")
-    print(f"Found {len(image_paths)} images")
     print(f"Saving demo outputs to: {output_dir}")
 
     conf, iou = load_best_thresholds()
@@ -67,7 +70,7 @@ def run_demo(mock: bool) -> None:
 
     model = YOLO(str(weights_path))
 
-    for img_path in image_paths[:5]:
+    for img_path in image_paths:
         print(f"\nProcessing: {img_path.name}")
         results = model.predict(
             source=str(img_path),
@@ -98,10 +101,11 @@ def run_demo(mock: bool) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Run YOLO demo inference on validation images.")
     parser.add_argument("--mock", action="store_true", help="Run demo on mock dataset")
+    parser.add_argument("--image", type=str, default=None, help="Path to a specific image to run inference on")
     args = parser.parse_args()
 
     try:
-        run_demo(mock=args.mock)
+        run_demo(mock=args.mock, image=args.image)
     except Exception as exc:
         print(f"Demo failed: {exc}", file=sys.stderr)
         sys.exit(1)
