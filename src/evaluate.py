@@ -12,7 +12,7 @@ import argparse
 import json
 import sys
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 
 import yaml
 from ultralytics import YOLO
@@ -25,13 +25,15 @@ try:
         MOCK_DATASET_YAML,
         RESULTS_DIR,
         BASELINE_CONFIG,
+        BEST_THRESHOLD_JSON,
     )
 except ImportError:
-    BASELINE_WEIGHTS = Path("runs/detect/outputs/checkpoints/baseline/weights/best.pt")
+    BASELINE_WEIGHTS = Path("outputs/checkpoints/baseline/weights/best.pt")
     DATASET_YAML = Path("data/processed/dataset.yaml")
     MOCK_DATASET_YAML = Path("data/mock/dataset.yaml")
     RESULTS_DIR = Path("outputs/results")
     BASELINE_CONFIG = Path("configs/baseline.yaml")
+    BEST_THRESHOLD_JSON = Path("outputs/results/best_threshold.json")
 
 
 def load_config(config_path: Path) -> Dict[str, Any]:
@@ -41,12 +43,20 @@ def load_config(config_path: Path) -> Dict[str, Any]:
 
 
 def get_device() -> str:
-    """Get device from baseline config, default to 'mps'."""
     try:
         cfg = load_config(BASELINE_CONFIG)
-        return cfg.get("device", "mps")
+        return cfg.get("device", "cpu")
     except FileNotFoundError:
-        return "mps"
+        return "cpu"
+
+
+def load_best_thresholds() -> Tuple[float, float]:
+    """Return (conf, iou) from the threshold sweep, or safe defaults."""
+    try:
+        data = json.loads(BEST_THRESHOLD_JSON.read_text())
+        return float(data["conf"]), float(data["iou"])
+    except (FileNotFoundError, KeyError, ValueError):
+        return 0.25, 0.45
 
 
 def extract_metrics(results) -> Dict[str, Any]:
@@ -62,7 +72,10 @@ def extract_metrics(results) -> Dict[str, Any]:
         "per_class": {},
     }
 
-    class_names = ["fire", "smoke"]  
+    try:
+        class_names = list(results.names.values())
+    except AttributeError:
+        class_names = ["fire", "smoke"]
     for i, name in enumerate(class_names):
         try:
             class_result = box.class_result(i)
@@ -123,14 +136,18 @@ def evaluate_model(weights_path: Path, data_yaml: Path, mock: bool) -> Dict[str,
         )
 
     device = get_device()
+    conf, iou = load_best_thresholds()
     print(f"Evaluating on device: {device}")
     print(f"Weights: {weights_path}")
     print(f"Dataset: {data_yaml}")
+    print(f"Thresholds: conf={conf} iou={iou}")
 
     model = YOLO(str(weights_path))
     results = model.val(
         data=str(data_yaml),
         device=device,
+        conf=conf,
+        iou=iou,
         workers=0,
         verbose=False,
     )

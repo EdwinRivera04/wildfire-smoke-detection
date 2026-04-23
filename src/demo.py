@@ -1,8 +1,20 @@
 import argparse
+import json
 import sys
 from pathlib import Path
 
+import cv2
 from ultralytics import YOLO
+
+BEST_THRESHOLD_JSON = Path("outputs/results/best_threshold.json")
+
+
+def load_best_thresholds():
+    try:
+        data = json.loads(BEST_THRESHOLD_JSON.read_text())
+        return float(data["conf"]), float(data["iou"])
+    except (FileNotFoundError, KeyError, ValueError):
+        return 0.25, 0.45
 
 
 def get_weights_path() -> Path:
@@ -50,20 +62,34 @@ def run_demo(mock: bool) -> None:
     print(f"Found {len(image_paths)} images")
     print(f"Saving demo outputs to: {output_dir}")
 
+    conf, iou = load_best_thresholds()
+    print(f"Using thresholds: conf={conf} iou={iou}")
+
     model = YOLO(str(weights_path))
 
     for img_path in image_paths[:5]:
-        print(f"Processing: {img_path.name}")
+        print(f"\nProcessing: {img_path.name}")
         results = model.predict(
             source=str(img_path),
+            conf=conf,
+            iou=iou,
             save=False,
             verbose=False,
         )
 
+        boxes = results[0].boxes
+        if boxes is not None and len(boxes):
+            names = results[0].names
+            detections = [
+                f"{names[int(cls)]} {float(score):.2f}"
+                for cls, score in zip(boxes.cls, boxes.conf)
+            ]
+            print(f"  Detected: {', '.join(detections)}")
+        else:
+            print("  No detections.")
+
         annotated = results[0].plot()
         save_path = output_dir / img_path.name
-
-        import cv2
         cv2.imwrite(str(save_path), annotated)
 
     print("\nDemo complete.")
