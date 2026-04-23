@@ -33,6 +33,16 @@ make evaluate                        # compute all metrics
 make demo                            # generate annotated JPEGs
 ```
 
+## Evaluation Results
+
+Evaluated on 3,099 val images from the D-Fire dataset using YOLOv8m baseline weights and optimized thresholds (conf=0.25, iou=0.45).
+
+| Class | Precision | Recall | mAP@50 | mAP@50-95 |
+|-------|-----------|--------|--------|-----------|
+| **Overall** | 0.753 | 0.732 | 0.680 | 0.409 |
+| Fire  | 0.697 | 0.681 | 0.618 | 0.345 |
+| Smoke | 0.810 | 0.783 | 0.743 | 0.473 |
+
 ## Environments
 
 | Setting   | Local (M4 MPS) | Colab (T4)  |
