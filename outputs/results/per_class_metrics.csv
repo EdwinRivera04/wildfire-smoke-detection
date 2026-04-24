@@ -1,0 +1,5 @@
+model,class,precision,recall,F1,AP@50,AP@50-95
+baseline,fire,0.704,0.6437,0.6725,0.7078,0.3757
+baseline,smoke,0.8255,0.7945,0.8097,0.8413,0.5193
+improved,fire,0.6806,0.6217,0.6498,0.6941,0.3613
+improved,smoke,0.7702,0.7511,0.7605,0.8044,0.4857
