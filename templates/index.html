@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wildfire Smoke Detection</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0f0f0f;
+      color: #e8e8e8;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+
+    h1 {
+      font-size: 1.6rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+      color: #fff;
+    }
+
+    .subtitle {
+      font-size: 0.9rem;
+      color: #888;
+      margin-bottom: 2rem;
+    }
+
+    .controls {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 1.5rem;
+      max-width: 640px;
+      margin-bottom: 2rem;
+    }
+
+    .upload-zone {
+      border: 2px dashed #3a3a3a;
+      border-radius: 8px;
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      margin-bottom: 1.5rem;
+    }
+
+    .upload-zone:hover { border-color: #f97316; }
+    .upload-zone.has-files { border-color: #22c55e; }
+
+    .upload-zone p { color: #aaa; font-size: 0.9rem; margin-top: 0.5rem; }
+    .upload-zone .icon { font-size: 2rem; }
+
+    #file-input { display: none; }
+
+    #file-names {
+      font-size: 0.82rem;
+      color: #22c55e;
+      margin-top: 0.5rem;
+      line-height: 1.6;
+    }
+
+    .slider-row {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .slider-row label {
+      font-size: 0.85rem;
+      color: #aaa;
+      white-space: nowrap;
+      min-width: 160px;
+    }
+
+    .slider-row label span {
+      color: #f97316;
+      font-weight: 600;
+    }
+
+    input[type="range"] {
+      flex: 1;
+      accent-color: #f97316;
+      cursor: pointer;
+    }
+
+    button#run-btn {
+      width: 100%;
+      padding: 0.75rem;
+      background: #f97316;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, opacity 0.2s;
+    }
+
+    button#run-btn:hover:not(:disabled) { background: #ea6a0a; }
+    button#run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    #error-msg {
+      color: #f87171;
+      font-size: 0.88rem;
+      margin-top: 1rem;
+      display: none;
+    }
+
+    #results { display: none; }
+
+    #results h2 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 1.25rem;
+      color: #fff;
+    }
+
+    .result-card {
+      background: #1a1a1a;
+      border: 1px solid #2a2a2a;
+      border-radius: 10px;
+      padding: 1.25rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .result-card .filename {
+      font-size: 0.82rem;
+      color: #888;
+      margin-bottom: 0.75rem;
+    }
+
+    .image-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .image-pair figure { margin: 0; }
+
+    .image-pair figcaption {
+      font-size: 0.75rem;
+      color: #666;
+      text-align: center;
+      margin-bottom: 0.3rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .image-pair img {
+      width: 100%;
+      border-radius: 6px;
+      display: block;
+    }
+
+    .detections {
+      font-size: 0.85rem;
+      padding: 0.5rem 0.75rem;
+      background: #111;
+      border-radius: 6px;
+      border-left: 3px solid #f97316;
+    }
+
+    .detections.none {
+      border-left-color: #555;
+      color: #666;
+    }
+
+    .detection-tag {
+      display: inline-block;
+      background: #f9731622;
+      color: #f97316;
+      border: 1px solid #f9731644;
+      border-radius: 4px;
+      padding: 0.15rem 0.5rem;
+      margin: 0.15rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+
+    .loading {
+      text-align: center;
+      color: #888;
+      padding: 2rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>Wildfire Smoke Detection</h1>
+  <p class="subtitle">Upload up to 3 images to detect fire and smoke using YOLOv8m</p>
+
+  <div class="controls">
+    <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
+      <div class="icon">🖼️</div>
+      <strong>Click to upload images</strong>
+      <p>JPG or PNG &nbsp;·&nbsp; Up to 3 images</p>
+      <div id="file-names"></div>
+    </div>
+    <input type="file" id="file-input" accept=".jpg,.jpeg,.png" multiple>
+
+    <div class="slider-row">
+      <label>Confidence threshold: <span id="conf-label">{{ default_conf }}</span></label>
+      <input type="range" id="conf-slider"
+             min="0.01" max="0.95" step="0.01"
+             value="{{ default_conf }}">
+    </div>
+
+    <button id="run-btn" disabled>Run Detection</button>
+    <div id="error-msg"></div>
+  </div>
+
+  <div class="loading" id="loading">Running inference...</div>
+
+  <div id="results">
+    <h2>Results</h2>
+    <div id="result-cards"></div>
+  </div>
+
+  <script>
+    const fileInput = document.getElementById('file-input');
+    const uploadZone = document.getElementById('upload-zone');
+    const fileNames = document.getElementById('file-names');
+    const confSlider = document.getElementById('conf-slider');
+    const confLabel = document.getElementById('conf-label');
+    const runBtn = document.getElementById('run-btn');
+    const errorMsg = document.getElementById('error-msg');
+    const resultsDiv = document.getElementById('results');
+    const resultCards = document.getElementById('result-cards');
+    const loading = document.getElementById('loading');
+
+    confSlider.addEventListener('input', () => {
+      confLabel.textContent = parseFloat(confSlider.value).toFixed(2);
+    });
+
+    fileInput.addEventListener('change', () => {
+      const files = Array.from(fileInput.files).slice(0, 3);
+      if (files.length) {
+        fileNames.textContent = files.map(f => f.name).join('\n');
+        uploadZone.classList.add('has-files');
+        runBtn.disabled = false;
+      } else {
+        fileNames.textContent = '';
+        uploadZone.classList.remove('has-files');
+        runBtn.disabled = true;
+      }
+    });
+
+    runBtn.addEventListener('click', async () => {
+      const files = Array.from(fileInput.files).slice(0, 3);
+      if (!files.length) return;
+
+      errorMsg.style.display = 'none';
+      resultsDiv.style.display = 'none';
+      loading.style.display = 'block';
+      runBtn.disabled = true;
+
+      const formData = new FormData();
+      files.forEach(f => formData.append('images[]', f));
+      formData.append('conf', confSlider.value);
+
+      try {
+        const resp = await fetch('/detect', { method: 'POST', body: formData });
+        const data = await resp.json();
+
+        if (data.error) {
+          errorMsg.textContent = data.error;
+          errorMsg.style.display = 'block';
+          return;
+        }
+
+        resultCards.innerHTML = '';
+        data.forEach(item => {
+          const card = document.createElement('div');
+          card.className = 'result-card';
+
+          const hasDetections = item.detections && item.detections.length > 0;
+          const detectionHtml = hasDetections
+            ? item.detections.map(d => `<span class="detection-tag">${d}</span>`).join('')
+            : 'No detections at this confidence level';
+
+          card.innerHTML = `
+            <div class="filename">${item.filename}</div>
+            <div class="image-pair">
+              <figure>
+                <figcaption>Original</figcaption>
+                <img src="data:image/png;base64,${item.original}" alt="Original">
+              </figure>
+              <figure>
+                <figcaption>Detected</figcaption>
+                <img src="data:image/png;base64,${item.annotated}" alt="Detected">
+              </figure>
+            </div>
+            <div class="detections ${hasDetections ? '' : 'none'}">${detectionHtml}</div>
+          `;
+          resultCards.appendChild(card);
+        });
+
+        resultsDiv.style.display = 'block';
+      } catch (err) {
+        errorMsg.textContent = 'Request failed. Is the server running?';
+        errorMsg.style.display = 'block';
+      } finally {
+        loading.style.display = 'none';
+        runBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
