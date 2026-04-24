@@ -133,6 +133,44 @@
       margin-bottom: 0.75rem;
     }
 
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.75rem;
+    }
+
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .zoom-controls button {
+      background: #2a2a2a;
+      border: 1px solid #3a3a3a;
+      color: #ccc;
+      border-radius: 4px;
+      width: 26px;
+      height: 26px;
+      font-size: 1rem;
+      line-height: 1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.15s;
+    }
+
+    .zoom-controls button:hover { background: #3a3a3a; color: #fff; }
+
+    .zoom-controls .zoom-label {
+      font-size: 0.75rem;
+      color: #666;
+      min-width: 36px;
+      text-align: center;
+    }
+
     .image-pair {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -151,10 +189,25 @@
       letter-spacing: 0.05em;
     }
 
-    .image-pair img {
+    .img-viewport {
       width: 100%;
+      height: 220px;
+      overflow: hidden;
       border-radius: 6px;
+      background: #111;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .img-viewport img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 4px;
       display: block;
+      transform-origin: center center;
+      transition: transform 0.2s;
     }
 
     .detections {
@@ -283,20 +336,56 @@
             ? item.detections.map(d => `<span class="detection-tag">${d}</span>`).join('')
             : 'No detections at this confidence level';
 
+          const cardId = `card-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          card.dataset.zoom = '1';
+          card.dataset.id = cardId;
           card.innerHTML = `
-            <div class="filename">${item.filename}</div>
+            <div class="card-header">
+              <div class="filename">${item.filename}</div>
+              <div class="zoom-controls">
+                <button class="zoom-out" title="Zoom out">−</button>
+                <span class="zoom-label">100%</span>
+                <button class="zoom-in" title="Zoom in">+</button>
+              </div>
+            </div>
             <div class="image-pair">
               <figure>
                 <figcaption>Original</figcaption>
-                <img src="data:image/png;base64,${item.original}" alt="Original">
+                <div class="img-viewport">
+                  <img src="data:image/png;base64,${item.original}" alt="Original">
+                </div>
               </figure>
               <figure>
                 <figcaption>Detected</figcaption>
-                <img src="data:image/png;base64,${item.annotated}" alt="Detected">
+                <div class="img-viewport">
+                  <img src="data:image/png;base64,${item.annotated}" alt="Detected">
+                </div>
               </figure>
             </div>
             <div class="detections ${hasDetections ? '' : 'none'}">${detectionHtml}</div>
           `;
+
+          const STEP = 0.25;
+          const MIN = 0.25;
+          const MAX = 4;
+
+          function applyZoom(c) {
+            const z = parseFloat(c.dataset.zoom);
+            c.querySelectorAll('.img-viewport img').forEach(img => {
+              img.style.transform = `scale(${z})`;
+            });
+            c.querySelector('.zoom-label').textContent = Math.round(z * 100) + '%';
+          }
+
+          card.querySelector('.zoom-in').addEventListener('click', () => {
+            card.dataset.zoom = Math.min(MAX, parseFloat(card.dataset.zoom) + STEP).toFixed(2);
+            applyZoom(card);
+          });
+
+          card.querySelector('.zoom-out').addEventListener('click', () => {
+            card.dataset.zoom = Math.max(MIN, parseFloat(card.dataset.zoom) - STEP).toFixed(2);
+            applyZoom(card);
+          });
           resultCards.appendChild(card);
         });
 
